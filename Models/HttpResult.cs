@@ -1,6 +1,6 @@
 namespace AspNetPlayground.Models
 {
-    public class HttpResponse<T>
+    public class HttpResult<T>
     {
         public int Code { get; set; }
 
@@ -8,9 +8,9 @@ namespace AspNetPlayground.Models
 
         public T Data { get; set; }
 
-        public static HttpResponse<T> GetResult(int code, string msg, T data = default(T))
+        public static HttpResult<T> GetResult(int code, string msg, T data = default(T))
         {
-            return new HttpResponse<T>
+            return new HttpResult<T>
             {
                 Code = code,
                 Msg = msg,
