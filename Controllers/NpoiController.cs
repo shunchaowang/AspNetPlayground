@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using AspNetCore.Controllers.Utils;
 using AspNetPlayground.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -84,13 +85,46 @@ namespace AspNetPlayground.Controllers
                     sheet = new XSSFWorkbook(stream).GetSheetAt(0);
                 }
 
+                // test if file is empty
+                if (sheet.LastRowNum < 1)
+                {
+
+                    return HttpResult<List<User>>.GetResult(-1, "File contains no data.");
+                }
+
                 IRow headerRow = sheet.GetRow(0); // Row 0 is the header
                 if (headerRow.LastCellNum != 4) // there should be 4 columns
                 {
                     return HttpResult<List<User>>.GetResult(-1, "File should have 4 columns");
                 }
+
+                // validate all fields are the right type
+                for (int i = sheet.FirstRowNum + 1; i <= sheet.LastRowNum; ++i)
+                {
+                    IRow row = sheet.GetRow(i);
+                    if (row == null) continue;
+
+                    // get formatted cell string value and trim
+                    string[] cellValues = new string[4];
+                    for (int j = 0; j < 4; ++j)
+                    {
+                        cellValues[j] = row.GetCell(j) == null ? "" : row.GetCell(j).GetFormattedCellValue().Trim();
+                    }
+
+                    // parse values and add to list
+                    list.Add(new User
+                    {
+                        Name = cellValues[0],
+                        Email = cellValues[1],
+                        Age = int.Parse(cellValues[3]),
+                        Dob = DateTime.Parse(cellValues[3])
+                    });
+
+                }
+
             }
 
+            return HttpResult<List<User>>.GetResult(0, "OK", list);
         }
 
         [HttpGet("export")]
