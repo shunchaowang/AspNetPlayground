@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using AspNetPlayground.Models;
@@ -7,6 +9,9 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using NPOI.HSSF.UserModel;
+using NPOI.SS.UserModel;
+using NPOI.XSSF.UserModel;
 
 namespace AspNetPlayground.Controllers
 {
@@ -53,7 +58,39 @@ namespace AspNetPlayground.Controllers
             {
                 return HttpResult<List<User>>.GetResult(-1, "File is empty.");
             }
-            return null;
+
+            string fileExtension = Path.GetExtension(file.FileName);
+            if (!(fileExtension.Equals(".xlsx", StringComparison.OrdinalIgnoreCase)
+                || fileExtension.Equals(".xlsx", StringComparison.OrdinalIgnoreCase)))
+            {
+
+                return HttpResult<List<User>>.GetResult(-1, "Not Support file extension");
+            }
+
+            var list = new List<User>();
+            using (var stream = new MemoryStream())
+            {
+                file.CopyToAsync(stream);
+                stream.Position = 0;
+
+                ISheet sheet;
+
+                if (fileExtension == ".xls") // excel 97-2000 
+                {
+                    sheet = new HSSFWorkbook(stream).GetSheetAt(0);
+                }
+                else // excel 2007 format
+                {
+                    sheet = new XSSFWorkbook(stream).GetSheetAt(0);
+                }
+
+                IRow headerRow = sheet.GetRow(0); // Row 0 is the header
+                if (headerRow.LastCellNum != 4) // there should be 4 columns
+                {
+                    return HttpResult<List<User>>.GetResult(-1, "File should have 4 columns");
+                }
+            }
+
         }
 
         [HttpGet("export")]
