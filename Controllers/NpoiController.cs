@@ -100,88 +100,23 @@ namespace AspNetPlayground.Controllers
                     }
 
                     // parse values and add to list
-                    list.Add(new User
+                    int age;
+                    DateTime dob;
+                    if (!int.TryParse(cellValues[2], out age))
                     {
-                        Name = cellValues[0],
-                        Email = cellValues[1],
-                        Age = int.Parse(cellValues[2]),
-                        Dob = DateTime.Parse(cellValues[3])
-                    });
-
-                }
-
-            }
-
-            return HttpResult<List<User>>.GetResult(0, "OK", list);
-        }
-
-        [HttpPost("importsync")]
-        [AutoValidateAntiforgeryToken]
-        public HttpResult<List<User>> Import(IFormFile file)
-        {
-            if (file == null || file.Length <= 0)
-            {
-                return HttpResult<List<User>>.GetResult(-1, "File is empty.");
-            }
-
-            string fileExtension = Path.GetExtension(file.FileName);
-            if (!(fileExtension.Equals(".xlsx", StringComparison.OrdinalIgnoreCase)
-                || fileExtension.Equals(".xlsx", StringComparison.OrdinalIgnoreCase)))
-            {
-
-                return HttpResult<List<User>>.GetResult(-1, "Not Support file extension");
-            }
-
-            var list = new List<User>();
-            using (var stream = new MemoryStream())
-            {
-                file.CopyToAsync(stream);
-                stream.Position = 0;
-
-                ISheet sheet;
-
-                if (fileExtension == ".xls") // excel 97-2000 
-                {
-                    sheet = new HSSFWorkbook(stream).GetSheetAt(0);
-                }
-                else // excel 2007 format
-                {
-                    sheet = new XSSFWorkbook(stream).GetSheetAt(0);
-                }
-
-                // test if file is empty
-                if (sheet.LastRowNum < 1)
-                {
-
-                    return HttpResult<List<User>>.GetResult(-1, "File contains no data.");
-                }
-
-                IRow headerRow = sheet.GetRow(0); // Row 0 is the header
-                if (headerRow.LastCellNum != 4) // there should be 4 columns
-                {
-                    return HttpResult<List<User>>.GetResult(-1, "File should have 4 columns");
-                }
-
-                // validate all fields are the right type
-                for (int i = sheet.FirstRowNum + 1; i <= sheet.LastRowNum; ++i)
-                {
-                    IRow row = sheet.GetRow(i);
-                    if (row == null) continue;
-
-                    // get formatted cell string value and trim
-                    string[] cellValues = new string[4];
-                    for (int j = 0; j < 4; ++j)
+                        return HttpResult<List<User>>.GetResult(-1, "Age is not numeric.");
+                    }
+                    if (!DateTime.TryParse(cellValues[3], out dob))
                     {
-                        cellValues[j] = row.GetCell(j) == null ? "" : row.GetCell(j).GetFormattedCellValue().Trim();
+                        return HttpResult<List<User>>.GetResult(-1, "Dob is not date.");
                     }
 
-                    // parse values and add to list
                     list.Add(new User
                     {
                         Name = cellValues[0],
                         Email = cellValues[1],
-                        Age = int.Parse(cellValues[3]),
-                        Dob = DateTime.Parse(cellValues[3])
+                        Age = age,
+                        Dob = dob
                     });
 
                 }
@@ -191,13 +126,41 @@ namespace AspNetPlayground.Controllers
             return HttpResult<List<User>>.GetResult(0, "OK", list);
         }
 
-        [HttpGet("export")]
+        [HttpGet]
         public async Task<HttpResult<string>> Export(CancellationToken cancellationToken)
         {
+            string webRoot = environment.WebRootPath;
+            string fileName = $"UserList-{DateTime.Now.ToString("yyyyMMddHHmmssfff")}.xlsx";
+            string downloadUrl = string.Format("{0}://{1}{2}", Request.Scheme, Request.Host, fileName);
+
+            FileInfo file = new FileInfo(Path.Combine(webRoot, fileName));
+
+            if (file.Exists)
+            {
+                file.Delete();
+                file = new FileInfo(Path.Combine(webRoot, fileName));
+            }
+
+            var memory = new MemoryStream();
+            using (var fs = new FileStream(Path.Combine(webRoot, fileName), FileMode.Create, FileAccess.Write))
+            {
+                IWorkbook workbook = new XSSFWorkbook();
+                ISheet sheet = workbook.CreateSheet("user");
+                IRow row = sheet.CreateRow(0);
+                row.CreateCell(0).SetCellValue("Name");
+                row.CreateCell(1).SetCellValue("Email");
+                row.CreateCell(2).SetCellValue("Age");
+                row.CreateCell(3).SetCellValue("Dob");
+
+
+                // data, in reality this should be loaded from database
+
+            }
+
             return null;
         }
 
-        [HttpGet("download")]
+        [HttpGet]
         public async Task<IActionResult> Download(CancellationToken cancellationToken)
         {
             return null;
