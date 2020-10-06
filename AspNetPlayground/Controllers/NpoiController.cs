@@ -138,10 +138,9 @@ namespace AspNetPlayground.Controllers
             if (file.Exists)
             {
                 file.Delete();
-                file = new FileInfo(Path.Combine(webRoot, fileName));
+                // file = new FileInfo(Path.Combine(webRoot, fileName));
             }
 
-            var memory = new MemoryStream();
             using (var fs = new FileStream(Path.Combine(webRoot, fileName), FileMode.Create, FileAccess.Write))
             {
                 IWorkbook workbook = new XSSFWorkbook();
@@ -152,18 +151,78 @@ namespace AspNetPlayground.Controllers
                 row.CreateCell(2).SetCellValue("Age");
                 row.CreateCell(3).SetCellValue("Dob");
 
+                // query data from database  
+                await Task.Yield();
 
                 // data, in reality this should be loaded from database
+                //TODO load data from the database
+                // here I create a random 10 rows
+                for (int i = 1; i <= 10; ++i)
+                {
+                    row = sheet.CreateRow(i);
+                    row.CreateCell(0).SetCellValue($"John {i}");
+                    row.CreateCell(1).SetCellValue($"john.{i}@me.com");
+                    row.CreateCell(2).SetCellValue(new Random().Next(20, 60));
+                    row.CreateCell(3).SetCellValue(DateTime.Now.AddYears(-new Random().Next(30, 50)));
+                }
 
+                workbook.Write(fs);
             }
 
-            return null;
+            // using(var stream = new FileStream(Path.Combine(webRoot, fileName), FileMode.Create)) {
+            //     await stream.CopyToAsync(memory);
+            // }
+
+            return HttpResult<string>.GetResult(0, "OK", downloadUrl);
         }
 
         [HttpGet]
         public async Task<IActionResult> Download(CancellationToken cancellationToken)
         {
-            return null;
+            string webRoot = environment.WebRootPath;
+            string fileName = $"UserList-{DateTime.Now.ToString("yyyyMMddHHmmssfff")}.xlsx";
+            string downloadUrl = string.Format("{0}://{1}{2}", Request.Scheme, Request.Host, fileName);
+
+            FileInfo file = new FileInfo(Path.Combine(webRoot, fileName));
+
+            if (file.Exists)
+            {
+                file.Delete();
+            }
+
+            using (var fs = new FileStream(Path.Combine(webRoot, fileName), FileMode.Create, FileAccess.Write))
+            {
+                IWorkbook workbook = new XSSFWorkbook();
+                ISheet sheet = workbook.CreateSheet("user");
+                IRow row = sheet.CreateRow(0);
+                row.CreateCell(0).SetCellValue("Name");
+                row.CreateCell(1).SetCellValue("Email");
+                row.CreateCell(2).SetCellValue("Age");
+                row.CreateCell(3).SetCellValue("Dob");
+
+                // query data from database  
+                await Task.Yield();
+
+                // data, in reality this should be loaded from database
+                //TODO load data from the database
+                // here I create a random 10 rows
+                for (int i = 1; i <= 10; ++i)
+                {
+                    row = sheet.CreateRow(i);
+                    row.CreateCell(0).SetCellValue($"John {i}");
+                    row.CreateCell(1).SetCellValue($"john.{i}@me.com");
+                    row.CreateCell(2).SetCellValue(new Random().Next(20, 60));
+                    row.CreateCell(3).SetCellValue(DateTime.Now.AddYears(-new Random().Next(30, 50)));
+                }
+
+                workbook.Write(fs);
+            }
+
+            byte[] fileBytes = System.IO.File.ReadAllBytes(downloadUrl);
+            var stream = new MemoryStream(fileBytes);
+            stream.Position = 0;
+
+            return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
     }
 }
