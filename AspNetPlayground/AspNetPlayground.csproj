@@ -8,4 +8,8 @@
     <PackageReference Include="npoi" Version="2.5.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../AspNetPlayground.DataAccess/AspNetPlayground.DataAccess.csproj" />
+  </ItemGroup>
+
 </Project>

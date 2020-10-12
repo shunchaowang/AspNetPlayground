@@ -17,4 +17,10 @@
     <ProjectReference Include="..\AspNetPlayground\AspNetPlayground.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="Data/*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
